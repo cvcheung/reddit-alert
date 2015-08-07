@@ -4,7 +4,7 @@ import praw
 from appindicator import RedditAlertAppIndicator
 from gi.repository import Notify
 from gi.repository import Gtk
-from gi.repository import GLib
+from gi.repository import Gobject
 from itertools import chain
 from Queue import Queue
 from subredditwindow import SubredditWindow
@@ -65,7 +65,7 @@ class RedditAlert(RedditAlertAppIndicator):
 
     def main(self):
         self.monitor()
-        GLib.timeout_add_seconds(self.delay, self.monitor)
+        self.timeout_id = GObject.timeout_add_seconds(self.delay, self.monitor)
         Gtk.main()
 
     def monitor(self):
@@ -91,6 +91,7 @@ class RedditAlert(RedditAlertAppIndicator):
                     main_menu.remove(q.get())
                 q.put(link_menu_item)
                 main_menu.append(link_menu_item)
+        return True
 
     def refresh(self):
         if not self.network_test():
