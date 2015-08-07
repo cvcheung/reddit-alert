@@ -1,5 +1,5 @@
 # reddit-alert
-Reddit Notifier built using [PRAW](praw.readthedocs.org/en/v3.1.0/) and the [GTK+](http://www.gtk.org/) library
+Reddit Notifier built using [PRAW](https://github.com/praw-dev/praw/) and the [GTK+](http://www.gtk.org/) library
 
 Stop manually refreshing reddit and automate the process. 
 
