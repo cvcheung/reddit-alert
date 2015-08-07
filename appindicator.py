@@ -27,7 +27,7 @@ class RedditAlertAppIndicator:
         self.applet.set_status(AppIndicator3.IndicatorStatus.ACTIVE)
         self.refresh_group = []
         self.expire_group = []
-        self.insert_location = 4
+        self.insert_location = 5
 
         # Initial dropdown menu for applet
         menu = Gtk.Menu()

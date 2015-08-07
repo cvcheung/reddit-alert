@@ -27,6 +27,10 @@ class RedditAlert(RedditAlertAppIndicator):
         change_subreddits.connect('activate', self.subreddit_manager)
         change_subreddits.show()
         self.menu.prepend(change_subreddits)
+        refresh_now = Gtk.MenuItem(label='Refresh Now')
+        refresh_now.connect('activate', self.refresh_now)
+        refresh_now.show()
+        self.menu.insert(refresh_now, 3)
         self.add_subreddits(*self.stored_subreddits)
 
     def add_subreddits(self, *subreddits):
@@ -41,25 +45,25 @@ class RedditAlert(RedditAlertAppIndicator):
             except praw.errors.NotFound:
                 self.invalid(_)
                 return False
-            if _.lower() not in self.stored_subreddits:
-                self.stored_subreddits.append(_.lower())
+            id = _.lower()
+            if id not in self.stored_subreddits:
+                self.stored_subreddits.append(id)
             if subreddit not in self.subreddits:
                 self.subreddits.append(subreddit)
-                self.add_subreddit_menu_item(subreddit.display_name)
+                self.add_subreddit_menu_item(id, subreddit.display_name)
         return True
 
-    def add_subreddit_menu_item(self, subreddit):
-        subreddit_menu = Gtk.MenuItem(label=subreddit)
+    def add_subreddit_menu_item(self, subreddit, title):
+        subreddit_menu = Gtk.MenuItem(label=title)
         subreddit_menu.show()
         subreddit_menu_drawer = Gtk.Menu()
         subreddit_menu.set_submenu(subreddit_menu_drawer)
-        self.menu.insert(subreddit_menu, self.insert_location)
-        self.insert_location += 1
-        self.subreddit_drawer[subreddit.lower()] = subreddit_menu_drawer, Queue(SUBREDDIT_MENU_ITEMS)
-        self.subreddit_menu_item[subreddit.lower()] = subreddit_menu
+        self.stored_subreddits.sort()
+        self.menu.insert(subreddit_menu, self.insert_location + self.stored_subreddits.index(subreddit))
+        self.subreddit_drawer[subreddit] = subreddit_menu_drawer, Queue(SUBREDDIT_MENU_ITEMS)
+        self.subreddit_menu_item[subreddit] = subreddit_menu
 
     def main(self):
-        self.monitor()
         GLib.timeout_add_seconds(self.delay, self.monitor)
         Gtk.main()
 
@@ -92,6 +96,9 @@ class RedditAlert(RedditAlertAppIndicator):
             self.delay_call(self.refresh)
         return chain(*map(praw.objects.Subreddit.get_new, self.subreddits))
 
+    def refresh_now(self, menu_item):
+        self.monitor()
+
     def remove_subreddit(self, subreddit):
         name = subreddit.lower()
         if name not in self.stored_subreddits:
@@ -101,7 +108,7 @@ class RedditAlert(RedditAlertAppIndicator):
         menu.deactivate()
         self.menu.remove(self.subreddit_menu_item.pop(name))
         for _ in self.subreddits:
-            if name == _.display_name:
+            if name == _.display_name.lower():
                 self.subreddits.remove(_)
                 return True
 
