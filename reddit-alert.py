@@ -64,6 +64,7 @@ class RedditAlert(RedditAlertAppIndicator):
         self.subreddit_menu_item[subreddit] = subreddit_menu
 
     def main(self):
+        self.monitor()
         GLib.timeout_add_seconds(self.delay, self.monitor)
         Gtk.main()
 
