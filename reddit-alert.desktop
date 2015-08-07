@@ -1,0 +1,9 @@
+[Desktop Entry]
+Encoding=UTF-8
+Name=Reddit-Alert
+Comment=A Notifier for new posts on Reddit
+Icon=reddit_applet
+Type=Application
+Exec=python reddit-alert.py
+StartupNotify=False
+Terminal=false
