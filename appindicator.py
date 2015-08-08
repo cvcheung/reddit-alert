@@ -4,36 +4,56 @@ import sys
 from gi.repository import AppIndicator3
 from gi.repository import Gtk
 from gi.repository import Notify
+from praw import objects as RObjects
 from time import sleep
 from webbrowser import open_new_tab
 
 
 class RedditAlertAppIndicator:
 
-    def __init__(self, refresh_time, expire_time, subreddits):
+    def __init__(self, fetch_method, refresh_time, expire_time, subreddits):
         if not Notify.init('RedditAlert'):
             sys.exit(1)
         self.delay = refresh_time
+        self.fetch_method = fetch_method
         self.expiration = expire_time
         self.stored_subreddits = subreddits
         self.stored_subreddits.sort()
         self.uri = 'file://{0}/reddit.svg'.format(os.path.abspath(os.path.curdir))
-        self.refresh_dict = {'30 seconds': 30, '60 seconds': 60, '2 minutes': 120, '3 minutes': 180,
-                             '5 minutes': 300, '10 minutes': 600, '15 minutes': 900, '60 minutes': 3600}
-        self.expiration_dict = {'Default': Notify.EXPIRES_DEFAULT, 'Never': Notify.EXPIRES_NEVER}
         self.applet = AppIndicator3.Indicator.new_with_path('RedditAlertIndicator', 'reddit_applet',
                                                             AppIndicator3.IndicatorCategory.APPLICATION_STATUS,
                                                             '{}'.format(os.path.abspath(os.path.curdir)))
         self.applet.set_status(AppIndicator3.IndicatorStatus.ACTIVE)
-        self.refresh_group = []
-        self.expire_group = []
-        self.insert_location = 5
+        self.insert_location = 6
 
         # Initial dropdown menu for applet
         menu = Gtk.Menu()
         self.applet.set_menu(menu)
 
+        # Add fetch method options
+        self.fetch_group = []
+        self.fetch_dict = {'Hot': RObjects.Subreddit.get_hot, 'New': RObjects.Subreddit.get_new,
+                             'Rising': RObjects.Subreddit.get_rising, 'Top': RObjects.Subreddit.get_top,
+                             'Controversial': RObjects.Subreddit.get_controversial}
+        self.fetch = self.fetch_dict[fetch_method]
+        fetch = Gtk.MenuItem(label='Change Fetch Method')
+        fetch.show()
+        menu.append(fetch)
+        fetch_submenu = Gtk.Menu()
+        for _ in ['Hot', 'New', 'Rising', 'Top', 'Controversial']:
+            fetch_option = Gtk.RadioMenuItem.new_with_label(self.fetch_group, label=_)
+            self.fetch_group = fetch_option.get_group()
+            fetch_option.connect('activate', self.update_fetch)
+            if _ == 'Hot':
+                fetch_option.set_active(True)
+            fetch_option.show()
+            fetch_submenu.append(fetch_option)
+        fetch.set_submenu(fetch_submenu)
+
         # Add refresh options
+        self.refresh_group = []
+        self.refresh_dict = {'30 seconds': 30, '60 seconds': 60, '2 minutes': 120, '3 minutes': 180,
+                             '5 minutes': 300, '10 minutes': 600, '15 minutes': 900, '60 minutes': 3600}
         refresh = Gtk.MenuItem(label='Change Refresh Rate')
         refresh.show()
         menu.append(refresh)
@@ -50,6 +70,9 @@ class RedditAlertAppIndicator:
         refresh.set_submenu(refresh_submenu)
 
         # Add notification expiration options
+        self.expire_group = []
+        self.expiration_dict = {'Default': Notify.EXPIRES_DEFAULT, 'Never': Notify.EXPIRES_NEVER}
+
         expire = Gtk.MenuItem(label='Change Notification Expiration')
         expire.show()
         menu.append(expire)
@@ -128,6 +151,7 @@ class RedditAlertAppIndicator:
 
     def save_settings(self, menu_item):
         settings_file = open('.reddit-alert-settings', 'r+')
+        settings_file.write('refresh = ' + str(self.fetch_method) + '\n')
         settings_file.write('refresh = ' + str(self.delay) + '\n')
         settings_file.write('expire = ' + str(self.expiration) + '\n')
         subreddits = ''
@@ -142,6 +166,11 @@ class RedditAlertAppIndicator:
         if radio_item.get_active():
             self.expiration = self.expiration_dict[radio_item.get_label()]
 
+    def update_fetch(self, radio_item):
+        if radio_item.get_active():
+            self.fetch_method = radio_item.get_label()
+            self.fetch = self.fetch_dict[radio_item.get_label()]
+
     def update_refresh(self, radio_item):
         if radio_item.get_active():
             self.delay = self.refresh_dict[radio_item.get_label()]
@@ -150,13 +179,15 @@ if __name__ == '__main__':
     # Tests
     initial_settings_file = open('.reddit-alert-settings')
     try:
+        method = initial_settings_file.readline().strip('\n').replace(' ', '').split('=')[1]
         delay = int(initial_settings_file.readline().strip('\n').replace(' ', '').split('=')[1])
         expiration = int(initial_settings_file.readline().strip('\n').replace(' ', '').split('=')[1])
         saved_subreddits = initial_settings_file.readline().strip('\n').replace(' ', '').split('=')[1].split(',')
     except IndexError:
+        method = 'Hot'
         delay = 180
         expiration = -1
         saved_subreddits = []
     initial_settings_file.close()
-    app = RedditAlertAppIndicator(delay, expiration, saved_subreddits)
+    app = RedditAlertAppIndicator(method, delay, expiration, saved_subreddits)
     Gtk.main()
