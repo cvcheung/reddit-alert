@@ -44,7 +44,7 @@ class RedditAlertAppIndicator:
             fetch_option = Gtk.RadioMenuItem.new_with_label(self.fetch_group, label=_)
             self.fetch_group = fetch_option.get_group()
             fetch_option.connect('activate', self.update_fetch)
-            if _ == 'Hot':
+            if _ == self.fetch:
                 fetch_option.set_active(True)
             fetch_option.show()
             fetch_submenu.append(fetch_option)
